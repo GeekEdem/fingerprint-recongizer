@@ -118,10 +118,10 @@ async function findCheckPoint() {
         for (let j = 1; j < (width -1); j++) {
             if (binarizedImage[i][j] == true) {
                 t = await checkThisPoint(i, j);
-                // if (t == 1 || t == 3) console.log("Coordinates", t, i, j);
+                // console.log("Coordinates", t, i, j);
                 // x => j, y => i;
-                if (t == 1) endPoint.push([j, i]);
-                if (t == 3) branchPoint.push([j, i]);
+                if (t >= 1 && t<=2) endPoint.push([j, i]);
+                else if (t >= 3 && t<=4) branchPoint.push([j, i]);
             }
         }
     }
@@ -180,6 +180,8 @@ async function findCheckPoint() {
 exports.transform = async (img, exitName) => {
     debug('Open image' + img);
     let image = await jimp.read(img);
+    // Замылим изображение, чтобы отсеят шумы
+    image = await image.gaussian(2);
     debug('Image opened');
     originImage = image.bitmap.data;
     width = image.bitmap.width;
@@ -252,12 +254,13 @@ exports.transform = async (img, exitName) => {
 };
 
 exports.pointsMatching = async (first, second) => {
+    const size = 20;
     let match = 0;
     let i;
     let j;
     for (i in first.branchPoints){
         for(j in second.branchPoints){
-            if ((j[0] >= i[0]-15 || j[0] < i[0]+15) && (j[1] >= i[1]-15 || j[1] < i[1]+15)) {
+            if ((j[0] >= i[0]-size || j[0] < i[0]+size) && (j[1] >= i[1]-size || j[1] < i[1]+size)) {
                 match += 1;
                 break;
             }
@@ -265,7 +268,7 @@ exports.pointsMatching = async (first, second) => {
     }
     for (i in first.endPoints){
         for(j in second.endPoints){
-            if ((j[0] >= i[0]-15 || j[0] < i[0]+15) && (j[1] >= i[1]-15 || j[1] < i[1]+15)) {
+            if ((j[0] >= i[0]-size || j[0] < i[0]+size) && (j[1] >= i[1]-size || j[1] < i[1]+size)) {
                 match += 1;
                 break;
             }
