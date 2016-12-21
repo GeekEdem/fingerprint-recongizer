@@ -103,7 +103,7 @@ async function checkThisPoint(x, y) {
     let c = 0;
     for (let i = x - 1; i <= x + 1; i++) {
         for (let j = y - 1; j <= y + 1; j++) {
-            if (binarizedImage[i][j] == 0) c += 1;
+            if (binarizedImage[i][j] == true) c += 1;
         }
     }
     return await (c - 1); //Будет минимум 1 вхождение - центр.
@@ -116,8 +116,9 @@ async function findCheckPoint() {
     let t;
     for (let i = 1; i < (height - 1); i++) {
         for (let j = 1; j < (width -1); j++) {
-            if (binarizedImage[i][j] == 0) {
+            if (binarizedImage[i][j] == true) {
                 t = await checkThisPoint(i, j);
+                // if (t == 1 || t == 3) console.log("Coordinates", t, i, j);
                 // x => j, y => i;
                 if (t == 1) endPoint.push([j, i]);
                 if (t == 3) branchPoint.push([j, i]);
@@ -130,107 +131,145 @@ async function findCheckPoint() {
     };
 }
 
-// возвращает список элементов, у которых нет одинакового в другом  списке
-async function removeDouble(x,y){
-    let z = [];
-    let i;
-    let j;
-    let c;
-    for (i in x) {
-        c = true;
-        for (let j in y) {
-            console.log('doublee1', i, j, x, y);
-            if (i == j) c = false;
-        }
-        if (c) z.push(i);
-    }
-    for (i in y) {
-        c = true;
-        for (j in x) {
-            console.log('doublee2', i, j, x, y);
-            if (i == j) c = false;
-        }
-        if (c) z.push(i);
-    }
-    return await z;
-}
+// // возвращает список элементов, у которых нет одинакового в другом  списке
+// async function removeDouble(x,y){
+//     let z = [];
+//     let i;
+//     let j;
+//     let c;
+//     for (i in x) {
+//         c = true;
+//         for (let j in y) {
+//             console.log('doublee1', i, j, x, y);
+//             if (i == j) c = false;
+//         }
+//         if (c) z.push(i);
+//     }
+//     for (i in y) {
+//         c = true;
+//         for (j in x) {
+//             console.log('doublee2', i, j, x, y);
+//             if (i == j) c = false;
+//         }
+//         if (c) z.push(i);
+//     }
+//     return await z;
+// }
+//
+// // на входе кортеж (ветвление, конечные)
+// async function delNoisePoint(r){
+//     let tmp = [];
+//     let tmp2 = [];
+//     let i;
+//     let j;
+//     for (i in r.endPoint){
+//         for (j in r.branchPoint) {
+//             // console.log('noise', i, j);
+//             if (j[0] >= i[0]-5 && j[0] < i[0]+5 && j[1] >= i[1]-5 && j[1] < i[1]+5) {
+//                 tmp.push(i);
+//                 tmp2.push(j);
+//             }
+//         }
+//     }
+//     return {
+//         branchPoint: await removeDouble(r.branchPoint, tmp2),
+//         endPoint: await removeDouble(r.endPoint, tmp)
+//     };
+// }
 
-// на входе кортеж (ветвление, конечные)
-async function delNoisePoint(r){
-    let tmp = [];
-    let tmp2 = [];
-    let i;
-    let j;
-    for (i in r.endPoint){
-        for (j in r.branchPoint) {
-            console.log('noise', i, j);
-            if (j[0] >= i[0]-5 && j[0] < i[0]+5 && j[1] >= i[1]-5 && j[1] < i[1]+5) {
-                tmp.push(i);
-                tmp2.push(j);
-            }
-        }
-    }
-    return {
-        branchPoint: await removeDouble(r.branchPoint, tmp2),
-        endPoint: await removeDouble(r.endPoint, tmp)
-    };
-}
+exports.transform = async (img, exitName) => {
+    debug('Open image' + img);
+    let image = await jimp.read(img);
+    debug('Image opened');
+    originImage = image.bitmap.data;
+    width = image.bitmap.width;
+    height = image.bitmap.height;
+    if(width > 12 && height > 12) {
+        let binary = await jsQR.binarizeImage(originImage, width, height).data;
+        await binary.forEach((pixel, index) => {
+            let row = parseInt(index / width);
+            if (typeof(binarizedImage[row]) == "undefined") binarizedImage[row] = [];
+            let col = index % width;
+            binarizedImage[row][col] = pixel;
+        });
+        debug('Image binarized and transformed to 2d array');
+        await tmpDelete();
+        debug('Image skeleton created');
+        let checkpoints = await findCheckPoint();
+        debug('checkPoints and endPoints founded');
+        // let deleteNoise = await delNoisePoint(checkpoints);
+        debug("White pixels start");
+        let data_u32 = await new Uint32Array(image.bitmap.data.buffer);
+        let imageData = [];
 
-exports.transform = function(img, exitName, cb) {
-    jimp.read(img).then( async (image) => {
-        debug('Image opened');
-        originImage = image.bitmap.data;
-        width = image.bitmap.width;
-        height = image.bitmap.height;
-        if(width > 12 && height > 12) {
-            let binary = await jsQR.binarizeImage(originImage, width, height).data;
-            await binary.forEach((pixel, index) => {
-                let row = parseInt(index / width);
-                if (typeof(binarizedImage[row]) == "undefined") binarizedImage[row] = [];
-                let col = index % width;
-                binarizedImage[row][col] = pixel;
+        // Pass Purple pixels
+        debug("Purple pixels start");
+        await checkpoints.branchPoints.forEach( (point) => {
+            binarizedImage[point[1]][point[0]] = 100;
+            binarizedImage[point[1]-1][point[0]-1] = 100;
+            binarizedImage[point[1]-1][point[0]+1] = 100;
+            binarizedImage[point[1]+1][point[0]-1] = 100;
+            binarizedImage[point[1]+1][point[0]+1] = 100;
+        });
+        debug("Purple pixels complete");
+        // Pass Green pixels
+        debug("Green pixels start");
+        await checkpoints.endPoints.forEach( (point) => {
+            binarizedImage[point[1]][point[0]] = 200;
+            binarizedImage[point[1]-1][point[0]-1] = 200;
+            binarizedImage[point[1]-1][point[0]+1] = 200;
+            binarizedImage[point[1]+1][point[0]-1] = 200;
+            binarizedImage[point[1]+1][point[0]+1] = 200;
+        });
+        debug("Green pixels complete");
+
+        await binarizedImage.forEach(async (col) => {
+            await col.forEach((row) => {
+                imageData.push(row == 0 ? 255 : row);
             });
-            debug('Image binarized and transformed to 2d array');
-            await tmpDelete();
-            debug('Image skeleton created');
-            let checkpoints = await findCheckPoint();
-            debug('checkPoints and endPoints founded');
-            // console.log('CHK', JSON.stringify(checkpoints.branchPoints));
-            // let deleteNoise = await delNoisePoint(checkpoints);
-            debug("White pixels start");
-            let data_u32 = new Uint32Array(image.bitmap.data.buffer);
-            let imageData = [];
-            binarizedImage.forEach((col) => {
-                col.forEach((row) => {
-                    imageData.push(row == 0 ? 255 : 0);
-                })
-            });
-            let alpha = (0xff << 24);
-            let pix = 0;
-            let i = width * height;
-            while (--i >= 0) {
-                pix = imageData[i];
+        });
+
+        let alpha = (0xff << 24);
+        let pix = 0;
+        let i = width * height;
+        while (--i >= 0) {
+            pix = imageData[i];
+            // console.log(pix, i);
+            if (pix == 100) data_u32[i] = -1231231;
+            else if (pix == 200) data_u32[i] = -8665791;
+            else {
+                if (pix === true) pix = 0;
                 data_u32[i] = alpha | (pix << 16) | (pix << 8) | pix;
             }
-            debug("White pixels complete");
-            // Pass Purple pixels
-            debug("Purple pixels start");
-            await checkpoints.branchPoints.forEach( (point) => {
-                let index = point[0] * point[1];
-                data_u32[index] = -1231231;
-            });
-            debug("Purple pixels complete");
-            // Pass Green pixels
-            debug("Green pixels start");
-            await checkpoints.endPoints.forEach( (point) => {
-                let index = point[0] * point[1];
-                data_u32[index] = -8665791;
-            });
-            debug("Green pixels complete");
-            // image.bitmap.data.buffer = binarizedImage;
-            image.write(exitName, cb);
-        } else cb("Too small image for jsQR library");
-    }).catch( (err) => {
-        cb(err);
-    });
+        }
+        debug("White pixels complete");
+        // image.bitmap.data.buffer = binarizedImage;
+        image.write(exitName, (err) => {
+            if(!err) console.log("Image save successful");
+        });
+        return checkpoints;
+    } else console.error("Too small image for jsQR library");
+};
+
+exports.pointsMatching = async (first, second) => {
+    let match = 0;
+    let i;
+    let j;
+    for (i in first.branchPoints){
+        for(j in second.branchPoints){
+            if ((j[0] >= i[0]-15 || j[0] < i[0]+15) && (j[1] >= i[1]-15 || j[1] < i[1]+15)) {
+                match += 1;
+                break;
+            }
+        }
+    }
+    for (i in first.endPoints){
+        for(j in second.endPoints){
+            if ((j[0] >= i[0]-15 || j[0] < i[0]+15) && (j[1] >= i[1]-15 || j[1] < i[1]+15)) {
+                match += 1;
+                break;
+            }
+        }
+    }
+    return await match;
 };
