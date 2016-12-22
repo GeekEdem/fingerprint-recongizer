@@ -181,7 +181,7 @@ exports.transform = async (img, exitName) => {
     debug('Open image' + img);
     let image = await jimp.read(img);
     // Замылим изображение, чтобы отсеят шумы
-    image = await image.gaussian(2);
+    image = await image.gaussian(1);
     debug('Image opened');
     originImage = image.bitmap.data;
     width = image.bitmap.width;
@@ -254,25 +254,37 @@ exports.transform = async (img, exitName) => {
 };
 
 exports.pointsMatching = async (first, second) => {
-    const size = 20;
+    // console.log(JSON.stringify(first), JSON.stringify(second));
+    const size = 12;
+    let all = 0;
     let match = 0;
     let i;
     let j;
+    let x;
+    let y;
     for (i in first.branchPoints){
+        all += 1;
         for(j in second.branchPoints){
-            if ((j[0] >= i[0]-size || j[0] < i[0]+size) && (j[1] >= i[1]-size || j[1] < i[1]+size)) {
+            x = first.branchPoints[i];
+            y = second.branchPoints[j];
+            // if (y[0] == x[0] && x[1] == y[1]) {
+            if ((y[0] >= x[0]-size && y[0] < x[0]+size) && (y[1] >= x[1]-size && y[1] < x[1]+size)) {
                 match += 1;
                 break;
             }
         }
     }
     for (i in first.endPoints){
+        all += 1;
         for(j in second.endPoints){
-            if ((j[0] >= i[0]-size || j[0] < i[0]+size) && (j[1] >= i[1]-size || j[1] < i[1]+size)) {
+            x = first.branchPoints[i];
+            y = second.branchPoints[j];
+            // if (y[0] == x[0] && x[1] == y[1]) {
+            if ((y[0] >= x[0]-size && y[0] < x[0]+size) && (y[1] >= x[1]-size && y[1] < x[1]+size)) {
                 match += 1;
                 break;
             }
         }
     }
-    return await match;
+    return await {match: match, all: all};
 };
