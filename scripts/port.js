@@ -4,6 +4,17 @@ const jimp = require('jimp');
 const jsQR = require("jsqr");
 const _ = require('lodash');
 const debug = require('debug')('fingerprint');
+const gpio = require('gpio');
+
+let greenLamp = gpio.export(17, {
+    direction: 'out',
+    interval: 300
+});
+
+let redLamp = gpio.export(18, {
+    direction: 'out',
+    interval: 300
+});
 
 let originImage = null;
 let binarizedImage = [];
@@ -11,37 +22,37 @@ let width = null;
 let height = null;
 
 // вызов процедуры скелетизации, на входе список списков(после бинаризации)
-async function tmpDelete() {
+function tmpDelete() {
     let count = 1;
     // повторять пока удалялся хотя бы один пиксель
     let test = 0;
     while (count != 0) {
-        count = await deleteMainTemplatePixel('main');
-        if (count) await deleteMainTemplatePixel('noise');
+        count = deleteMainTemplatePixel('main');
+        if (count) deleteMainTemplatePixel('noise');
         test++;
     }
     debug("Thinning repeats: " + test);
 }
 
 // удаление пикселя по основному или шумовому набору набору, возврат кол-ва удаленных
-async function deleteMainTemplatePixel (type) {
+function deleteMainTemplatePixel (type) {
     let count = 0;
     for (let i = 1; i < (width - 1); i++){
         for (let j = 1; j < (height - 1); j++) {
             // пиксель посредине черный
             if (binarizedImage[j][i] == false){
-                if (await deletable(i, j, type)) {
+                if (deletable(i, j, type)) {
                     binarizedImage[j][i] = true;
                     count += 1;
                 }
             }
         }
     }
-    return await count;
+    return count;
 }
 
 // определение принадлежности 3*3 к шумам
-async function fringe(a) {
+function fringe(a) {
     let t = [
         [true,true,true,true,false,true,true,true,true],
 
@@ -65,7 +76,7 @@ async function fringe(a) {
 }
 
 // определение принадлежности 3*3 к основным шаблонам
-async function check(a){
+function check(a){
     let t123457=[true,true,false,false,true,false];
     let t013457=[true,true,true,false,false,false];
     let t134567=[false,true,false,false,true,true];
@@ -87,37 +98,37 @@ async function check(a){
 }
 
 // получение 3*3, передача на проверку для осн.
-async function deletable (x, y, param='main'){
+function deletable (x, y, param='main'){
     let a=[];
     for (let i = y-1; i < y+2; i++){
         for (let j = x-1; j < x+2; j++){
             a.push(binarizedImage[i][j]);
         }
     }
-    if (param == 'main') return await check(a);
-    else if (param == 'noise') return await fringe(a);
+    if (param == 'main') return check(a);
+    else if (param == 'noise') return fringe(a);
 }
 
 // подсчет количества черных в окрестности
-async function checkThisPoint(x, y) {
+function checkThisPoint(x, y) {
     let c = 0;
     for (let i = x - 1; i <= x + 1; i++) {
         for (let j = y - 1; j <= y + 1; j++) {
             if (binarizedImage[i][j] == true) c += 1;
         }
     }
-    return await (c - 1); //Будет минимум 1 вхождение - центр.
+    return (c - 1); //Будет минимум 1 вхождение - центр.
 }
 
 // формирование списков точек ветвления и конечных
-async function findCheckPoint() {
+function findCheckPoint() {
     let branchPoint = [];
     let endPoint = [];
     let t;
     for (let i = 1; i < (height - 1); i++) {
         for (let j = 1; j < (width -1); j++) {
             if (binarizedImage[i][j] == true) {
-                t = await checkThisPoint(i, j);
+                t = checkThisPoint(i, j);
                 // console.log("Coordinates", t, i, j);
                 // x => j, y => i;
                 if (t >= 1 && t<=2) endPoint.push([j, i]);
@@ -125,14 +136,14 @@ async function findCheckPoint() {
             }
         }
     }
-    return await {
+    return {
         branchPoints: branchPoint,
         endPoints: endPoint
     };
 }
 
 // // возвращает список элементов, у которых нет одинакового в другом  списке
-// async function removeDouble(x,y){
+// function removeDouble(x,y){
 //     let z = [];
 //     let i;
 //     let j;
@@ -153,11 +164,11 @@ async function findCheckPoint() {
 //         }
 //         if (c) z.push(i);
 //     }
-//     return await z;
+//     return z;
 // }
 //
 // // на входе кортеж (ветвление, конечные)
-// async function delNoisePoint(r){
+// function delNoisePoint(r){
 //     let tmp = [];
 //     let tmp2 = [];
 //     let i;
@@ -172,13 +183,14 @@ async function findCheckPoint() {
 //         }
 //     }
 //     return {
-//         branchPoint: await removeDouble(r.branchPoint, tmp2),
-//         endPoint: await removeDouble(r.endPoint, tmp)
+//         branchPoint: removeDouble(r.branchPoint, tmp2),
+//         endPoint: removeDouble(r.endPoint, tmp)
 //     };
 // }
 
 exports.transform = async (img, exitName) => {
     debug('Open image' + img);
+    redLamp.set();
     let image = await jimp.read(img);
     // Замылим изображение, чтобы отсеят шумы
     image = await image.gaussian(1);
@@ -195,13 +207,13 @@ exports.transform = async (img, exitName) => {
             binarizedImage[row][col] = pixel;
         });
         debug('Image binarized and transformed to 2d array');
-        await tmpDelete();
+        tmpDelete();
         debug('Image skeleton created');
-        let checkpoints = await findCheckPoint();
+        let checkpoints = findCheckPoint();
         debug('checkPoints and endPoints founded');
-        // let deleteNoise = await delNoisePoint(checkpoints);
+        // let deleteNoise = delNoisePoint(checkpoints);
         debug("White pixels start");
-        let data_u32 = await new Uint32Array(image.bitmap.data.buffer);
+        let data_u32 = new Uint32Array(image.bitmap.data.buffer);
         let imageData = [];
 
         // Pass Purple pixels
@@ -249,12 +261,14 @@ exports.transform = async (img, exitName) => {
         image.write(exitName, (err) => {
             if(!err) console.log("Image save successful");
         });
+        redLamp.reset();
         return checkpoints;
     } else console.error("Too small image for jsQR library");
 };
 
 exports.pointsMatching = async (first, second) => {
     // console.log(JSON.stringify(first), JSON.stringify(second));
+    greenLamp.set();
     const size = 12;
     let all = 0;
     let match = 0;
@@ -286,5 +300,6 @@ exports.pointsMatching = async (first, second) => {
             }
         }
     }
+    greenLamp.reset();
     return await {match: match, all: all};
 };

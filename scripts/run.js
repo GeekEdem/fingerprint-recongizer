@@ -5,8 +5,8 @@ const port = require('./port');
 
 const dirPath = path.join(__dirname, '..', 'tests');
 
-const fileName1 = 'get1.bmp';
-const fileName2 = 'get4.bmp';
+const fileName1 = 'r2.bmp';
+const fileName2 = 'r2_v2.bmp';
 
 function createPath(name){
     return path.join(dirPath, name);
