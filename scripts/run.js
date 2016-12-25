@@ -10,6 +10,7 @@ mongoose.connect('mongodb://localhost:27017/fingers');
 mongoose.Promise = Promise;
 
 let UsersModel = require(path.join(__dirname, '..', './UsersModel'));
+let HistoryModel = require(path.join(__dirname, '..', './HistoryModel'));
 (async function(){
     let result = await UsersModel.findOne({username: "Yurii.Chikhrai"}).exec();
 
@@ -17,7 +18,7 @@ let UsersModel = require(path.join(__dirname, '..', './UsersModel'));
 
     chokidar.watch(workingPath).on('add', async (filename, props) => {
         let separatorArray = filename.split(path.sep);
-        let points = await port.transform(filename, separatorArray[separatorArray.length - 1]);
+        let points = await port.transform(filename, separatorArray[separatorArray.length - 1], 3);
         if(!result) {
             await UsersModel.create({
                 username: "Yurii.Chikhrai",
@@ -33,10 +34,26 @@ let UsersModel = require(path.join(__dirname, '..', './UsersModel'));
         } else {
             let etalons = await UsersModel.find({}).exec();
             // console.log("Etalons", etalons);
-            etalons.forEach( async (etalon) => {
+            let match = await Promise.all(etalons.map( async (etalon) => {
                 // console.log("One", etalon);
                 let match = await port.pointsMatching(etalon, points);
-                console.log("MATCH with", etalon.username, ":", match.match/match.all*100);
+                let math = match.match/match.all*100;
+                // let math = 52.51366120218579;
+                console.log("MATCH with", etalon.username, ":", math);
+                return {
+                    username: etalon._id,
+                    match: math
+                };
+            }));
+            await HistoryModel.create({
+                endPoints: points.endPoints,
+                branchPoints: points.branchPoints,
+                image: {
+                    buffer: points.buffer,
+                    width: points.width,
+                    height: points.height
+                },
+                match: match
             });
         }
         // console.log(filename, points);

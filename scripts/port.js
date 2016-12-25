@@ -189,14 +189,27 @@ function findCheckPoint() {
 //     };
 // }
 
-exports.transform = async (img, exitName) => {
+exports.transform = async (img, exitName, gaussian=false) => {
     debug('Open image' + img);
     // redLamp.set();
     let image = await jimp.read(img);
-    // Замылим изображение, чтобы отсеят шумы
-    debug('Start gaussian transformation');
-    image = await image.gaussian(1);
-    debug('Gaussian transformation complete');
+    if(gaussian){
+        // Замылим изображение, чтобы отсеят шумы
+        debug('Start gaussian transformation');
+        image = await image.gaussian(gaussian);
+        debug('Gaussian transformation complete');
+        await new Promise((resolve, reject) => {
+            image.write(path.join(__dirname, '..', 'converted', "before_" + exitName), (err) => {
+                if (!err) {
+                    debug("Image with gauss save successful");
+                    resolve();
+                } else {
+                    console.error(err);
+                    reject(err);
+                }
+            });
+        });
+    }
     debug('Image opened');
     originImage = image.bitmap.data;
     width = image.bitmap.width;
@@ -277,6 +290,7 @@ exports.transform = async (img, exitName) => {
 };
 
 exports.pointsMatching = async (first, second) => {
+    debug("Start matching");
     // console.log(JSON.stringify(first), JSON.stringify(second));
     // greenLamp.set();
     const size = 12;
@@ -310,6 +324,7 @@ exports.pointsMatching = async (first, second) => {
             }
         }
     }
+    debug("Matching complete");
     // greenLamp.reset();
     return await {match: match, all: all};
 };
