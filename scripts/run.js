@@ -3,13 +3,45 @@
 const path = require('path');
 const port = require('./port');
 const chokidar = require('chokidar');
+const mongoose = require('mongoose');
+const Promise = require('bluebird');
 
-let workingPath = path.join(__dirname, '..', 'new', '*.bmp');
+mongoose.connect('mongodb://localhost:27017/fingers');
+mongoose.Promise = Promise;
 
-chokidar.watch(workingPath).on('add', async (filename, props) => {
-    let points = await port.transform(filename, filename);
-    console.log(filename, points);
-});
+let UsersModel = require(path.join(__dirname, '..', './UsersModel'));
+(async function(){
+    let result = await UsersModel.findOne({username: "Yurii.Chikhrai"}).exec();
+
+    let workingPath = path.join(__dirname, '..', 'new', '*.bmp');
+
+    chokidar.watch(workingPath).on('add', async (filename, props) => {
+        let separatorArray = filename.split(path.sep);
+        let points = await port.transform(filename, separatorArray[separatorArray.length - 1]);
+        if(!result) {
+            await UsersModel.create({
+                username: "Yurii.Chikhrai",
+                endPoints: points.endPoints,
+                branchPoints: points.branchPoints,
+                image: {
+                    buffer: points.buffer,
+                    width: points.width,
+                    height: points.height
+                }
+            });
+            // console.log("Etalon saved success");
+        } else {
+            let etalons = await UsersModel.find({}).exec();
+            // console.log("Etalons", etalons);
+            etalons.forEach( async (etalon) => {
+                // console.log("One", etalon);
+                let match = await port.pointsMatching(etalon, points);
+                console.log("MATCH with", etalon.username, ":", match.match/match.all*100);
+            });
+        }
+        // console.log(filename, points);
+    });
+})();
 
 
 // const dirPath = path.join(__dirname, '..', 'tests');

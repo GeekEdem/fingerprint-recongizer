@@ -6,9 +6,15 @@ let Schema = mongoose.Schema;
 
 let UsersSchema = new Schema({
     username: {type: String, unique: true},
-    fingerImage: {type: String, data: Buffer},
-    endPoints: {type: [Number]},
-    branchPoints: {type: [Number]}
+    image: {type: {
+        _id: false,
+        buffer: {type: String, data: Buffer},
+        width: {type: Number},
+        height: {type: Number}
+    }, select: false},
+    endPoints: {type: Schema.Types.Mixed},
+    branchPoints: {type: Schema.Types.Mixed},
+    __v: false
 }, {
     collection: "Users"
 });

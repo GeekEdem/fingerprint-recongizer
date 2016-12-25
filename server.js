@@ -26,6 +26,11 @@ app.post('/add', (req, res) => {
 
 app.use('/', express.static(path.join(__dirname, 'public')));
 
+// Serve index page
+app.get('/*', function(req, res) {
+    res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
+
 io.on('connection', function (socket) {
   socket.emit('connected', "Now you are connected to server. Enjoy =)");
   socket.on('client:event', function (data) {

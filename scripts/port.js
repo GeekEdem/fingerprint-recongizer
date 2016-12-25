@@ -5,6 +5,7 @@ const jsQR = require("jsqr");
 const _ = require('lodash');
 const debug = require('debug')('fingerprint');
 const gpio = require('gpio');
+const path = require('path');
 
 let greenLamp = gpio.export(17, {
     direction: 'out',
@@ -131,8 +132,8 @@ function findCheckPoint() {
                 t = checkThisPoint(i, j);
                 // console.log("Coordinates", t, i, j);
                 // x => j, y => i;
-                if (t >= 1 && t<=2) endPoint.push([j, i]);
-                else if (t >= 3 && t<=4) branchPoint.push([j, i]);
+                if (t == 1) endPoint.push([j, i]);
+                else if (t == 3) branchPoint.push([j, i]);
             }
         }
     }
@@ -190,10 +191,12 @@ function findCheckPoint() {
 
 exports.transform = async (img, exitName) => {
     debug('Open image' + img);
-    redLamp.set();
+    // redLamp.set();
     let image = await jimp.read(img);
     // Замылим изображение, чтобы отсеят шумы
+    debug('Start gaussian transformation');
     image = await image.gaussian(1);
+    debug('Gaussian transformation complete');
     debug('Image opened');
     originImage = image.bitmap.data;
     width = image.bitmap.width;
@@ -258,17 +261,24 @@ exports.transform = async (img, exitName) => {
         }
         debug("White pixels complete");
         // image.bitmap.data.buffer = binarizedImage;
-        image.write(exitName, (err) => {
-            if(!err) console.log("Image save successful");
+        image.write(path.join(__dirname, '..', 'converted', exitName), (err) => {
+            if(!err) debug("Image save successful");
+            else console.error(err);
         });
-        redLamp.reset();
+        // redLamp.reset();
+
+        // Return image data
+        checkpoints.buffer = image.bitmap.data;
+        checkpoints.width = image.bitmap.width;
+        checkpoints.height = image.bitmap.height;
+        debug("Transform complete");
         return checkpoints;
     } else console.error("Too small image for jsQR library");
 };
 
 exports.pointsMatching = async (first, second) => {
     // console.log(JSON.stringify(first), JSON.stringify(second));
-    greenLamp.set();
+    // greenLamp.set();
     const size = 12;
     let all = 0;
     let match = 0;
@@ -300,6 +310,6 @@ exports.pointsMatching = async (first, second) => {
             }
         }
     }
-    greenLamp.reset();
+    // greenLamp.reset();
     return await {match: match, all: all};
 };
