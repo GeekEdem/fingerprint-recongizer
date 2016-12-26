@@ -14,7 +14,6 @@ let HistorySchema = new Schema({
     endPoints: {type: Schema.Types.Mixed},
     branchPoints: {type: Schema.Types.Mixed},
     match: {type: [{
-        _id: false,
         username: {type: Schema.ObjectId, ref: "UsersModel"},
         match: {type: Number}
     }]},

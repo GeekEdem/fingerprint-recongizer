@@ -6,18 +6,26 @@ let bodyParser = require('body-parser');
 let path = require('path');
 let mongoose = require('mongoose');
 let UsersModel = require('./UsersModel');
+let HistoryModel = require('./HistoryModel');
 let server = require('http').Server(app);
 let io = require('socket.io')(server, {serveClient: true});
 
 // Connect to test DB
-mongoose.connect('mongodb://fingerprint:recognizer@ds052629.mlab.com:52629/fingerprint-recognizer');
+// mongoose.connect('mongodb://fingerprint:recognizer@ds052629.mlab.com:52629/fingerprint-recognizer');
+mongoose.connect('mongodb://localhost:27017/fingers');
+mongoose.Promise = require('bluebird');
 
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json());
 
 app.get('/users', async (req, res) => {
-    let users = await UsersModel.find().lean();
+    let users = await UsersModel.find({}).select('_id username').lean().exec();
     res.status(200).send({"result": users});
+});
+
+app.get('/history', async (req, res) => {
+    let history = await HistoryModel.find({}).select('image.buffer match').populate('match.username', 'username').lean().exec();
+    res.status(200).send({"result": history});
 });
 
 app.post('/add', (req, res) => {
@@ -27,7 +35,7 @@ app.post('/add', (req, res) => {
 app.use('/', express.static(path.join(__dirname, 'public')));
 
 // Serve index page
-app.get('/*', function(req, res) {
+app.get('/', function(req, res) {
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 

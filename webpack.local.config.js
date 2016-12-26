@@ -1,5 +1,5 @@
 var webpack = require('webpack');
-var ExtractTextPlugin = require('extract-text-webpack-plugin');
+// var ExtractTextPlugin = require('extract-text-webpack-plugin');
 
 
 var bootstrapPath = __dirname + '/node_modules/bootstrap/dist/css';
@@ -22,8 +22,8 @@ module.exports = {
 
   // Set entry point to ./src/main and include necessary files for hot load
   entry:  [
-    "webpack-dev-server/client?http://localhost:8080",
-    "webpack/hot/only-dev-server",
+    // "webpack-dev-server/client?http://localhost:8080",
+    // "webpack/hot/only-dev-server",
     "./src/app"
   ],
 
@@ -32,14 +32,14 @@ module.exports = {
   output: {
     path: __dirname + "/public/",
     filename: "app.js",
-    publicPath: "http://localhost:8080/public/"
+    publicPath: "http://localhost:8080/"
   },
 
   // Necessary plugins for hot load
   plugins: [
     new webpack.HotModuleReplacementPlugin(),
-    new webpack.NoErrorsPlugin(),
-    new ExtractTextPlugin('style.css', { allChunks: true })
+    new webpack.NoErrorsPlugin()
+    // new ExtractTextPlugin('style.css', { allChunks: true })
   ],
 
   // Transform source code using Babel and React Hot Loader
