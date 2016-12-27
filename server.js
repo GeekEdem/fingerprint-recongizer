@@ -19,8 +19,14 @@ app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json());
 
 app.get('/users', async (req, res) => {
-    let users = await UsersModel.find({}).select('_id username').lean().exec();
+    let users = await UsersModel.find({}).select('_id username image.buffer').lean().exec();
     res.status(200).send({"result": users});
+});
+
+app.delete('/users/:id', async (req, res) => {
+    let result = await UsersModel.findByIdAndRemove(req.params.id).exec();
+    console.log(result);
+    res.status(200).send({"result": result});
 });
 
 app.get('/history', async (req, res) => {

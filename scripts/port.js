@@ -281,7 +281,13 @@ exports.transform = async (img, exitName, gaussian=false) => {
         // redLamp.reset();
 
         // Return image data
-        checkpoints.buffer = image.bitmap.data;
+        checkpoints.buffer = await new Promise( (resolve,reject) =>{
+            // pass -1 - for autodetect mime type
+            image.getBase64( -1, (err, result) => {
+                if(!err) resolve(result);
+                else reject(err);
+            });
+        });
         checkpoints.width = image.bitmap.width;
         checkpoints.height = image.bitmap.height;
         debug("Transform complete");

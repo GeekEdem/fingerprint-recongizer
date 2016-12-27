@@ -25,8 +25,8 @@ const rootRoute = {
       ]
     },
     {
-      path: '/login',
-      component: require('./components/pages/Login'),
+      path: '/dashboard/add',
+      component: require('./components/pages/Add'),
       childRoutes: [
       ]
     }

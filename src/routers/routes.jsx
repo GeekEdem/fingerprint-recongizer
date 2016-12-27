@@ -6,21 +6,21 @@ import DashboardLayout from "../components/layouts/Dashboard";
 
 import DashboardOverviewPage from "../components/pages/dashboard/Overview";
 import DashboardReportsPage from "../components/pages/dashboard/Reports";
-import LoginPage from "../components/pages/Login";
+import AddPage from "../components/pages/Add";
 
 var Routes = React.createClass({
 
   statics: {
     getRoutes: function() {
       return (
-          <Route name="base" path="/" handler={BaseLayout}>
+          <Route name="base" path="/" handler={DashboardLayout}>
             <Route name="dashboard" path="/dashboard" handler={DashboardLayout}>
               <Route name="dashboard.overview" path="/overview" handler={DashboardOverviewPage} />
               <Route name="dashboard.reports" path="/reports" handler={DashboardReportsPage} />
+              <Route name="dashboard.add" path="/add" handler={AddPage} />
               <DefaultRoute name="dashboard.default" handler={DashboardOverviewPage} />
             </Route>
-            <Route name="login" path="/login" handler={LoginPage} />
-            <DefaultRoute name="default" handler={DashboardLayout} />
+            <DefaultRoute name="default" handler={DashboardOverviewPage} />
             <Redirect from="/" to="dashboard.overview" />
           </Route>
       );

@@ -18,7 +18,7 @@ let HistoryModel = require(path.join(__dirname, '..', './HistoryModel'));
 
     chokidar.watch(workingPath).on('add', async (filename, props) => {
         let separatorArray = filename.split(path.sep);
-        let points = await port.transform(filename, separatorArray[separatorArray.length - 1], 3);
+        let points = await port.transform(filename, separatorArray[separatorArray.length - 1], 1);
         if(!result) {
             await UsersModel.create({
                 username: "Yurii.Chikhrai",
